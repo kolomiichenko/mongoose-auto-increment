@@ -116,6 +116,22 @@ exports.plugin = function (schema, options) {
   schema.method('resetCount', resetCount);
   schema.static('resetCount', resetCount);
 
+  // Declare a function to rollback counter - decrement value.
+  var rollbackCount = function (callback) {
+    IdentityCounter.findOneAndUpdate(
+      { model: settings.model, field: settings.field },
+      { $inc: { count: settings.incrementBy * -1 }},
+      { new: true }, // new: true specifies that the callback should get the updated counter.
+      function (err, counter) {
+        if (err) return callback(err);
+        callback(null, counter);
+      }
+    );
+  };
+  // Add rollbackCount as both a method on documents and a static on the schema for convenience.
+  schema.method('rollbackCount', rollbackCount);
+  schema.static('rollbackCount', rollbackCount);
+
   // Every time documents in this schema are saved, run this logic.
   schema.pre('save', function (next) {
     // Get reference to the document being saved.
